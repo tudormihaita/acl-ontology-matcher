@@ -13,7 +13,7 @@ This project is a contrastive bi-encoder for unsupervised ontology matching (ACL
 - Reference mappings are **never** used for training.
 - **Test** references are never used for any decision: thresholds, hyperparameters, early stopping or picking the best setting of an experiment. These choices use the validation split only.
 - No leakage sources: cross-references (`hasDbXref`, `exactMatch`, ...), UMLS/MONDO/DOID/MeSH/Wikidata, SapBERT, or LLM-generated synonyms (SPEC §3.3).
-- Batches are **class-unique**, **per-ontology**, and contain **no hard negative from an in-batch anchor class** (SPEC §4.2.3). These rules are enforced by tests.
+- Batches are **class-unique**, **per-ontology**, and contain **no hard negative from an in-batch anchor class** and **no text conflicts** (SPEC §4.2.3). These rules are enforced by tests.
 - The core pipeline has no rule-based extension and no logical repair.
 
 ## Environment

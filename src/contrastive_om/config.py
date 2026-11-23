@@ -85,6 +85,19 @@ def load_config(path: str | Path, overrides: dict | None = None) -> Config:
     return Config(data, path)
 
 
+def resolve_device(name: str = "auto") -> str:
+    """``auto`` -> cuda > mps > cpu; otherwise the name itself."""
+    if name != "auto":
+        return name
+    import torch
+
+    if torch.cuda.is_available():
+        return "cuda"
+    if torch.backends.mps.is_available():
+        return "mps"
+    return "cpu"
+
+
 def set_seed(seed: int) -> None:
     """Seed python, numpy and torch (if installed) for reproducibility."""
     random.seed(seed)

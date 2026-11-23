@@ -198,7 +198,7 @@ def apply_label_fixes(label: str, fixes: list[dict] | None) -> str:
     """Apply documented data-cleaning substitutions to a normalized label.
 
     Each fix is ``{pattern: <regex>, replace: <str>, count: <int, 0 = all>}``.
-    Used for the Bio-ML OMIM artefact where "type" became "iia" (see data/README.md).
+    Used for the Bio-ML OMIM artifact where "type" became "iia" (see data/README.md).
     """
     for fix in fixes or []:
         label = re.sub(fix["pattern"], fix["replace"], label, count=int(fix.get("count", 0)))

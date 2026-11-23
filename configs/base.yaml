@@ -11,7 +11,7 @@ task:
   val_refs: data/raw/bio-ml/omim-ordo/refs_equiv/train.tsv
   test_refs: data/raw/bio-ml/omim-ordo/refs_equiv/test.tsv
   test_cands: data/raw/bio-ml/omim-ordo/refs_equiv/test.cands.tsv
-  # Bio-ML OMIM artefact: "type" was replaced by "iia" (e.g. "nuclear iia 7"). Restore the
+  # Bio-ML OMIM artifact: "type" was replaced by "iia" (e.g. "nuclear iia 7"). Restore the
   # first occurrence ("..., iia iia" was originally "TYPE IIA"). Applied to all methods.
   source_label_fixes:
     - {pattern: '\biia\b', replace: type, count: 1}
@@ -35,7 +35,9 @@ lex:
   abbreviations: true
   rewrite_rules: true
   normalization_table: true
+  comma_inversion: true       # "x, y" -> "y x" as a table variant (decided in Phase 2)
   min_rule_count: 20
+  rule_scope: pooled          # per_ontology | pooled (rules mined from both ontologies' synonyms; decided in Phase 2)
 model:
   encoder: sentence-transformers/all-MiniLM-L6-v2
   max_seq_length: 32

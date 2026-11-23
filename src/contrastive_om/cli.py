@@ -21,7 +21,7 @@ log = logging.getLogger("contrastive_om")
 
 
 def cmd_stats(args) -> None:
-    cfg = load_config(args.config)
+    cfg = config_from_args(args)
     out: dict = {}
     for which in ("source", "target"):
         path = Path(cfg.task[f"{which}_owl"])
@@ -67,14 +67,90 @@ def cmd_stats(args) -> None:
     print(f"\nwrote {dest}")
 
 
+def parse_overrides(items: list[str] | None) -> dict:
+    """``["pairs.positives=[syn, lex]", "seed=43"]`` -> nested dict (values parsed as YAML)."""
+    import yaml
+
+    out: dict = {}
+    for item in items or []:
+        key, _, value = item.partition("=")
+        node = out
+        *parents, leaf = key.strip().split(".")
+        for p in parents:
+            node = node.setdefault(p, {})
+        node[leaf] = yaml.safe_load(value)
+    return out
+
+
+def config_from_args(args):
+    return load_config(args.config, overrides=parse_overrides(getattr(args, "set", None)))
+
+
+def load_task_ontologies(cfg) -> dict:
+    return {which: load_from_config(cfg, which) for which in ("source", "target")}
+
+
+def mine_and_save(cfg, ontologies=None, force: bool = False):
+    """Mine pairs (cached by config hash) and return (rows, stats, path)."""
+    from contrastive_om.evaluate import read_mappings
+    from contrastive_om.pairs import load_rows, mine_pairs, pairs_path, save_rows
+
+    path = pairs_path(cfg)
+    if path.exists() and not force:
+        log.info("using cached pairs %s", path)
+        return load_rows(path), json.loads(path.with_suffix(".stats.json").read_text()), path
+    ontologies = ontologies or load_task_ontologies(cfg)
+    refs = set(read_mappings(cfg.task.full_refs))  # only for the leakage assertion
+    fixes = {w: cfg.task.get(f"{w}_label_fixes") for w in ontologies}
+    rows, stats, lexicons = mine_pairs(cfg, ontologies, references=refs, label_fixes=fixes)
+    save_rows(rows, stats, lexicons, path)
+    return rows, stats, path
+
+
+def cmd_mine(args) -> None:
+    from contrastive_om.batching import batch_stats, batch_violations, build_batches
+
+    cfg = config_from_args(args)
+    rows, stats, path = mine_and_save(cfg, force=args.force)
+    print(f"\npairs: {path} ({len(rows)} rows)")
+    for name, s in stats.items():
+        if not isinstance(s, dict):
+            continue
+        print(f"\n== {name}")
+        for key in ("rows", "rows_by_source", "pct_classes_covered", "negatives_by_kind",
+                    "rows_filled_with_random_negatives"):
+            print(f"  {key}: {s[key]}")
+        print(f"  single-label classes covered: {s['single_label_classes_covered']}/{s['single_label_classes']}")
+        if "lexicon" in s:
+            lx = s["lexicon"]
+            print(f"  lexicon: {lx['rules_kept']} rules, {lx['variants_total']} variants "
+                  f"{lx['variants_by_mechanism']}, single-label classes with variants "
+                  f"{lx['single_label_classes_with_variants']}/{lx['single_label_classes']}")
+    print(f"\nleakage check: {stats.get('leakage_check')}")
+
+    bs = int(cfg.train.batch_size)
+    batches = build_batches(rows, bs, int(cfg.seed), cfg.pairs.batch_scope)
+    bad = [b for b in batches if batch_violations(rows, b, cfg.pairs.batch_scope)]
+    print(f"batches (size {bs}): {batch_stats(batches, bs)} | batches violating rules: {len(bad)}")
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="contrastive_om")
     parser.add_argument("-v", "--verbose", action="store_true")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p = sub.add_parser("stats", help="parse the ontologies and write data stats")
-    p.add_argument("--config", required=True)
+    def with_config(p):
+        p.add_argument("--config", required=True)
+        p.add_argument("--set", action="append", metavar="KEY=VALUE",
+                       help="override a config value, e.g. --set pairs.positives='[syn, lex]'")
+        return p
+
+    p = with_config(sub.add_parser("stats", help="parse the ontologies and write data stats"))
     p.set_defaults(func=cmd_stats)
+
+    p = with_config(sub.add_parser("mine", help="mine training pairs and print pair stats"))
+    p.add_argument("--force", action="store_true", help="re-mine even if cached")
+    p.set_defaults(func=cmd_mine)
 
     args = parser.parse_args(argv)
     logging.basicConfig(

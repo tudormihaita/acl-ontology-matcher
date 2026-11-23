@@ -127,21 +127,30 @@ Mine **per ontology**, independently. Output rows look like `{anchor, positive, 
 
 #### 4.2.1 Internal lexicon (`src/contrastive_om/lexicon.py`)
 
-The lexicon turns each ontology's own naming conventions into new positive pairs. It is built **per ontology** from that ontology's content only. Three mechanisms:
+The lexicon turns naming conventions found inside the ontologies into new positive pairs. Variants are always variants of a class's **own** labels; no mapping is used. Three mechanisms:
 
-**(a) Abbreviation extraction.** Run the Schwartz–Hearst algorithm over the raw (un-normalized) labels and definitions to find (long form, short form) pairs. Example: `"alzheimer disease 2; AD2"` → `("alzheimer disease 2", "ad2")`. A pair is kept only if the long form is a label of C or contained in a label/definition of C. It becomes a positive for C.
+**(a) Abbreviation extraction.** Run the Schwartz–Hearst algorithm over the raw (un-normalized) labels and definitions to find "long form (SF)" pairs. Example: `"Prune belly syndrome (PBS) is…"` → `("prune belly syndrome", "pbs")`.
+- **From a raw label of C:** the short form and the label without its parenthetical become variants of C.
+- **From a definition:** the short form becomes a variant only of the class(es) whose label **equals** the long form. Definitions often mention other diseases' abbreviations.
+- Short forms must contain an uppercase letter in the raw text, which avoids "(see below)".
 
 **(b) Rewrite rules mined from synonym pairs.**
 - For every pair of labels of the same class, compute the token-level edit after normalization. Rule types:
-  - comma inversion: `"x, y"` ↔ `"y x"` (e.g. `"deafness, autosomal dominant 5"` ↔ `"autosomal dominant deafness 5"`);
-  - single-token insertion/deletion (e.g. `"type 2"` ↔ `"2"`);
-  - single-token substitution (e.g. `"syndrome"` ↔ `"disease"`).
-- Represent each edit as a context-free rule and count its occurrences. Keep rules with count ≥ `lex.min_rule_count` (default 20).
-- Apply the kept rules to every label of every class to generate variants.
+  - single-token substitution (e.g. `"familial"` ↔ `"hereditary"`), applied in both directions;
+  - single-token deletion (e.g. `"x syndrome"` → `"x"`). Only the deletion direction is generated, since the training pair is symmetric anyway.
+- Numeral substitutions (`"2"` ↔ `"ii"`) are left to the context-aware table (c).
+- Keep rules with count ≥ `lex.min_rule_count` (default 20) and apply them to every label (first occurrence).
+- `lex.rule_scope`:
+  - `per_ontology`: rules mined from the ontology's own classes;
+  - `pooled` (**default, decided in Phase 2**): rules mined from the synonym pairs of both ontologies, still applied only to each class's own labels. OMIM's synonyms are almost all abbreviations, so per-ontology mining gives OMIM a single rule.
+- Phase 2 finding: comma inversion (`"x, y"` ↔ `"y x"`) almost never occurs between synonyms *within* an ontology (5 cases), so it cannot be mined. It is a hand-written table entry (c).
 
 **(c) Normalization table** (hand-written, small, in `lexicon.py`):
-- roman ↔ arabic numerals I–X ↔ 1–10 when they appear as standalone tokens (e.g. `"type ii"` ↔ `"type 2"`);
-- a short British/US spelling list (e.g. `haem`/`hem`, `oesophag`/`esophag`, `tumour`/`tumor`).
+- roman ↔ arabic numerals: ii–ix always; i, v, x only after a context word (`type`, `class`, `complex`, `factor`, …), so `"fragile x syndrome"` is untouched. Arabic → roman only after a context word.
+- American ↔ British spelling for unambiguous token prefixes (`hemo`/`haemo`, `tumor`/`tumour`, `esophag`/`oesophag`, …; never `hem`, so `"hemiplegia"` is untouched).
+- `lex.comma_inversion` (**on by default, decided in Phase 2**): `"cardiomyopathy, dilated, 1a"` → `"dilated cardiomyopathy 1a"`. Conservative: only 1–3-word modifiers without conjunctions, prepositions or "type"/"form"; a trailing index stays at the end.
+  - It is a general terminology convention (inverted index headings), chosen by looking at how both ontologies phrase labels, never at mappings. The presentation states this explicitly.
+  - With pooled rules, OMIM single-label classes with a lexicon positive go from 1,059 to 1,468 of 3,208.
 
 **Filters for generated variants:**
 - the variant must differ from every existing label of C;
@@ -157,11 +166,13 @@ The lexicon turns each ontology's own naming conventions into new positive pairs
 | key | negative | notes |
 |---|---|---|
 | `sibling` | a label of a sibling class | the hardest; can be a false negative |
-| `sibling_filtered` | as `sibling`, after filtering | drop a sibling if (a) it shares any normalized label with C, (b) its pre-trained-encoder cosine to the anchor is > `filter_cos` (default 0.85), or (c) the ontology has disjointness axioms and they do not declare the sibling disjoint from C. Rule (c) only applies if the ontology has any disjointness axioms; Phase 0 reports whether it does |
+| `sibling_filtered` | as `sibling`, after filtering | drop a sibling **class** if (a) it shares any normalized label with C, (b) the pre-trained-encoder cosine between the anchor and **any** of its labels is > `filter_cos` (default 0.85), or (c) the ontology has disjointness axioms and they do not declare the sibling disjoint from C. Filtering whole classes matters: otherwise a too-similar sibling comes back through its abbreviation. Rule (c) is inactive on OMIM–ORDO (no disjointness axioms) |
 | `hierarchy` | a label of a parent or child of C | related but not equivalent |
 | `model_mined` | (should) the nearest same-ontology labels of other classes under a model from a first training round | excludes classes sharing a normalized label with C; round 2 retrains from the base encoder with these negatives |
 
 `num_hard_negatives` (default 1) is the number of hard negatives per row. **Rows with no available hard negative are filled with a random label from another class of the same ontology** (a BERTMap-style soft negative). Every row then has the same shape. The miner counts these filled rows.
+- With `hard_negatives: []` (E2 "none") rows have **no** negative column: in-batch negatives only.
+- A negative is never a string that is also a label of C.
 
 #### 4.2.3 Batch composition
 
@@ -169,7 +180,8 @@ These rules are critical for InfoNCE correctness:
 - **Class-unique batches.** A batch never contains two rows with the same `class_iri`. Otherwise one class's synonyms become negatives for each other.
 - **No hard negative from an in-batch anchor class.** No row's hard negative may belong to a class that is the `class_iri` of any row in the same batch. Otherwise (e.g. row *i* = class C, row *j* = sibling D with a hard negative from C) C's own synonym becomes a negative for C's anchor.
 - **Per-ontology batches** (`batch_scope: per_ontology`, the default). All rows in a batch come from one ontology. Otherwise a class and its true cross-ontology match can meet in a batch as a false negative.
-- **Implementation:** either pre-build batches and disable trainer shuffling, or override the trainer's batch sampler. A unit test must verify all three rules.
+- **No text conflicts.** Anchors and positives in a batch are all distinct, and no negative equals any anchor or positive. A label shared by two classes can then never be a "negative" for itself. Negatives may repeat among themselves; a duplicated wrong candidate is harmless.
+- **Implementation:** `batching.py` pre-builds batches greedily over a seeded shuffle, deferring conflicting rows to the next batch; every row is used once. Unit tests verify all four rules.
 
 ### 4.3 Contrastive objective and training (`src/contrastive_om/train.py`)
 
@@ -343,7 +355,9 @@ lex:
   abbreviations: true
   rewrite_rules: true
   normalization_table: true
+  comma_inversion: true       # decided in Phase 2
   min_rule_count: 20
+  rule_scope: pooled          # per_ontology | pooled (decided in Phase 2)
 model:
   encoder: sentence-transformers/all-MiniLM-L6-v2
   max_seq_length: 32
