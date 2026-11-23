@@ -1,0 +1,6 @@
+# E3a: E2 winner (neg_sibling_filtered, τ = 0.05) with temperature τ = 0.02.
+inherit: neg_sibling_filtered.yaml
+name: temp_0.02
+experiment: E3a
+train:
+  temperature: 0.02

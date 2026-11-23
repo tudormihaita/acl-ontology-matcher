@@ -1,0 +1,6 @@
+# E0: the pre-trained encoder with no fine-tuning ("epoch 0"), same matching pipeline.
+inherit: base.yaml
+name: pretrained
+experiment: E0
+train:
+  enabled: false

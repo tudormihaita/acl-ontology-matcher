@@ -230,6 +230,15 @@ Embeddings are L2-normalized, so cosine is the dot product. Only labels are embe
 
 No candidate index, no extension, no repair.
 
+**Implementation notes (Phase 4):**
+- **Memory.** The class × class score matrix is kept in memory (about 9.6k × 9.3k float32 ≈ 350 MB). The label × label matrix is never built: label scores are reduced to class scores chunk by chunk with `np.maximum.reduceat`.
+- **What gets scored.** All labeled classes are embedded, so neighbor scores can use parents. Classes with `use_in_alignment=false` are masked to −∞ before top-k, so they are never predicted.
+- **Mutual nearest neighbors.** "t's best source" is taken over the candidate graph (sources that have t in their top-k).
+- **Ranking metrics** (local and full retrieval) use the scoring matrix (cosine or CSLS) *before* neighbor re-scoring and selection. They describe the embedding space; selection and λ affect only global matching.
+- **CSLS threshold grid:** percentiles of the selected pairs' scores.
+- **Precision depends on the split.** Validation precision is lower than test precision at the same θ. When scoring validation (30% of the refs), predictions for test pairs are ignored, but predictions for sources without any reference still count as false positives, so the fixed FP mass weighs more against fewer TPs. This is inherent to evaluation with partial references.
+- `pipeline.py` (not in the original layout) orchestrates mine → train → evaluate for one run, keeping `cli.py` thin. Inference-only variants (E4/E5) re-evaluate a run dir: `cli evaluate --run RUN_DIR --set match.selection=mutual`. Label embeddings are cached in `RUN_DIR/cache/`.
+
 ### 4.6 String-match baseline (`match.py`, `method: string_match`)
 
 Map (s, t) with score 1.0 if s and t share at least one normalized label (Section 4.1 normalization, without lexicon variants). Every such pair is kept; no threshold and no selection. It is evaluated with the same harness:
@@ -299,6 +308,24 @@ Each experiment is one YAML in `configs/`, run with `uv run python -m contrastiv
 
 The total is about 9 "must" training runs plus up to 5 "should/could" runs. MiniLM runs should take minutes on the M4. If a single run exceeds about 20 minutes, reduce `max_pairs_per_class` or switch that run to Colab.
 
+**Config files (Phase 5)** — names describe what changes; the `experiment` key holds the ID:
+
+| ID | Config(s) |
+|---|---|
+| B, E0 | `string_match.yaml`, `pretrained.yaml` |
+| E1 | `syn.yaml`, `syn_lex.yaml` |
+| E2 | `neg_sibling.yaml`, `neg_sibling_filtered.yaml`, `neg_hierarchy.yaml` (each inherits the E1 winner) |
+| E3a | `temp_0.02.yaml`, `temp_0.1.yaml` (inherit the E2 winner) |
+| E4, E5, E5b | no configs: `scripts/inference_ablations.py RUN_DIR` (chains the winners on validation) |
+| final, S | `final.yaml`; seeds via `--set seed=43 --set experiment=S` |
+
+**Pre-declared extra runs** (rules fixed before running them):
+- `neg_sibling_hierarchy`, run only if both a sibling-type and the hierarchy negative beat "none" on validation. Not run: hierarchy did not.
+- `final_lex.yaml`, the final config plus `lex` positives. It replaces `final` only if it wins on validation F1. It did not (0.6685 vs 0.6709).
+- The pre-trained encoder is also evaluated with the final matching settings, so that the effect of training is not confounded with the effect of matching.
+
+Results and the decision chain: `results/final_config.md`.
+
 ---
 
 ## 7. Analysis (Phase 6)
@@ -326,9 +353,9 @@ acl-ontology-matcher/
   scripts/download_data.sh
   src/contrastive_om/
     __init__.py config.py ontology.py lexicon.py pairs.py batching.py
-    train.py represent.py match.py evaluate.py analysis.py cli.py
+    train.py represent.py match.py evaluate.py pipeline.py analysis.py cli.py
   tests/fixtures/toy_a.owl toy_b.owl toy_refs.tsv
-  tests/test_ontology.py test_lexicon.py test_pairs.py test_batching.py test_evaluate.py test_match.py
+  tests/test_ontology.py test_lexicon.py test_pairs.py test_batching.py test_evaluate.py test_match.py test_train.py
   notebooks/results.ipynb
   presentation/       # Phase 8 (format decided then)
   runs/               # git-ignored

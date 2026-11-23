@@ -1,0 +1,7 @@
+# Pre-declared check (decided before running): the final configuration with lexicon positives.
+# If it beats `final` on VALIDATION F1, it becomes the final configuration and the seeds use it.
+inherit: final.yaml
+name: final_lex
+experiment: final_lex
+pairs:
+  positives: [syn, lex]

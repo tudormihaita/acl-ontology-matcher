@@ -1,0 +1,6 @@
+# E1: positives = synonym pairs + internal-lexicon variants (SPEC §4.2.1).
+inherit: base.yaml
+name: syn_lex
+experiment: E1
+pairs:
+  positives: [syn, lex]

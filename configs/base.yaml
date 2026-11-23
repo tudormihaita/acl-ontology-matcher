@@ -62,3 +62,4 @@ output:
   runs_dir: runs
   results_dir: results
   pairs_dir: data/pairs
+  append_summary: true

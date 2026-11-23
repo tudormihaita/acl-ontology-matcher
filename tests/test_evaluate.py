@@ -197,6 +197,12 @@ def test_bootstrap_prf_point_and_ci():
     assert out == bootstrap_prf(PRED, TEST, VAL, n_resamples=500, seed=1)  # deterministic
 
 
+def test_bootstrap_independent_of_input_order():
+    a = bootstrap_prf(PRED, TEST, VAL, n_resamples=200, seed=3)
+    b = bootstrap_prf(list(reversed(PRED)), list(reversed(TEST)), VAL, n_resamples=200, seed=3)
+    assert a == b
+
+
 def test_bootstrap_perfect_predictions():
     out = bootstrap_prf(TEST, TEST, n_resamples=200)
     assert out["f1_ci_low"] == out["f1_ci_high"] == 1.0

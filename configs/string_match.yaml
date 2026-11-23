@@ -1,0 +1,8 @@
+# B: string-match baseline (SPEC §4.6): (s, t) matched if they share a normalized label.
+inherit: base.yaml
+name: string_match
+experiment: B
+train:
+  enabled: false
+match:
+  method: string_match

@@ -1,0 +1,6 @@
+# E2: E1 winner (syn) + one sibling_filtered hard negative per row (SPEC §4.2.2).
+inherit: syn.yaml
+name: neg_sibling_filtered
+experiment: E2
+pairs:
+  hard_negatives: [sibling_filtered]

@@ -1,0 +1,6 @@
+# E2: E1 winner (syn) + one hierarchy hard negative per row (SPEC §4.2.2).
+inherit: syn.yaml
+name: neg_hierarchy
+experiment: E2
+pairs:
+  hard_negatives: [hierarchy]

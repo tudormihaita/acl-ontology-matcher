@@ -46,13 +46,15 @@ def make_run_dir(cfg, root: str | Path | None = None) -> Path:
     return run_dir
 
 
-def load_encoder(cfg, device: str):
+def load_encoder(cfg, device: str | None = None, path: str | None = None):
+    """The configured pre-trained encoder, or a trained model saved at ``path``."""
     from sentence_transformers import SentenceTransformer
 
+    device = device or resolve_device(cfg.get("device", "auto"))
     # On MPS, the fused SDPA attention kernel has no dropout support, which breaks the cached
     # loss; eager attention computes the same thing. Used for every loss so runs stay comparable.
     model_kwargs = {"attn_implementation": "eager"} if device == "mps" else None
-    model = SentenceTransformer(cfg.model.encoder, device=device, model_kwargs=model_kwargs)
+    model = SentenceTransformer(path or cfg.model.encoder, device=device, model_kwargs=model_kwargs)
     model.max_seq_length = int(cfg.model.max_seq_length)
     return model
 

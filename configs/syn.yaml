@@ -1,0 +1,6 @@
+# E1: positives = synonym pairs only (two labels of the same class).
+inherit: base.yaml
+name: syn
+experiment: E1
+pairs:
+  positives: [syn]

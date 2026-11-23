@@ -10,3 +10,5 @@ pairs:
   max_pairs_per_class: 4
 train:
   batch_size: 32
+output:
+  append_summary: false   # smoke runs never go into results/summary.csv

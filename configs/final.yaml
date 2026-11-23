@@ -1,0 +1,14 @@
+# Final training configuration, chosen step by step on validation F1:
+#   E1 positives: syn (tie with syn_lex, broken by validation MRR)
+#   E2 hard negatives: sibling_filtered
+#   E3a temperature: 0.05
+# Matching settings (E4/E5/E5b) are filled in from scripts/inference_ablations.py.
+inherit: neg_sibling_filtered.yaml
+name: final
+experiment: final
+# Matching settings chosen on validation by scripts/inference_ablations.py (E4, E5, E5b):
+match:
+  class_repr: max
+  scoring: csls
+  selection: mutual
+  neighbor_lambda: 0.0

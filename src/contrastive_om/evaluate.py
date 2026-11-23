@@ -242,9 +242,11 @@ def bootstrap_prf(
     nulls = set(null_references) - refs
     preds = set(predictions) - nulls
     units: dict[str, list[int]] = {}
-    for s, t in refs:
+    # sorted: set order changes between processes (string hash randomization), which would
+    # change which unit each bootstrap index points to, and therefore the CI
+    for s, t in sorted(refs):
         units.setdefault(s, [0, 0, 0])[2] += 1
-    for s, t in preds:
+    for s, t in sorted(preds):
         u = units.setdefault(s, [0, 0, 0])
         u[1] += 1
         u[0] += int((s, t) in refs)
