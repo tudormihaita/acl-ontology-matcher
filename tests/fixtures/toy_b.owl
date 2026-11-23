@@ -1,0 +1,72 @@
+<?xml version="1.0"?>
+<!-- Toy target ontology. Hierarchy:
+     DisorderOfHeart
+       CardiacMuscleDisease (alt: "cardiomyopathy")
+         DCM1A   (label "dilated cardiomyopathy type 1A")
+         DCM1B   (label "dilated cardiomyopathy type 1B")
+         DCM1C   (label "dilated cardiomyopathy type 1C")
+     PulmonaryDisorder (syn "lung disease")
+     DCM1A and DCM1B declared disjoint via owl:AllDisjointClasses.
+-->
+<rdf:RDF xmlns="http://example.org/b#"
+     xml:base="http://example.org/b"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+     xmlns:efo="http://www.ebi.ac.uk/efo/"
+     xmlns:oboInOwl="http://www.geneontology.org/formats/oboInOwl#">
+    <owl:Ontology rdf:about="http://example.org/b"/>
+
+    <owl:Class rdf:about="http://example.org/b#DisorderOfHeart">
+        <rdfs:label>disorder of heart</rdfs:label>
+        <skos:exactMatch rdf:resource="http://example.org/a#HeartDisease"/>
+        <skos:altLabel rdf:resource="http://example.org/a#HeartDisease"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="http://example.org/b#CardiacMuscleDisease">
+        <rdfs:label>cardiac muscle disease</rdfs:label>
+        <efo:alternative_term>cardiomyopathy</efo:alternative_term>
+        <efo:definition>Disease of the myocardium.</efo:definition>
+        <rdfs:subClassOf rdf:resource="http://example.org/b#DisorderOfHeart"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="http://example.org/b#DCM1A">
+        <rdfs:label>dilated cardiomyopathy type 1A</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://example.org/b#CardiacMuscleDisease"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="http://example.org/b#DCM1B">
+        <rdfs:label>dilated cardiomyopathy type 1B</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://example.org/b#CardiacMuscleDisease"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="http://example.org/b#DCM1C">
+        <rdfs:label>dilated cardiomyopathy type 1C</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://example.org/b#CardiacMuscleDisease"/>
+    </owl:Class>
+
+    <!-- linked to its parent only through a part_of restriction (ORDO style) -->
+    <owl:ObjectProperty rdf:about="http://purl.obolibrary.org/obo/BFO_0000050"/>
+    <owl:Class rdf:about="http://example.org/b#DCM1D">
+        <rdfs:label>dilated cardiomyopathy type 1D</rdfs:label>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://purl.obolibrary.org/obo/BFO_0000050"/>
+                <owl:someValuesFrom rdf:resource="http://example.org/b#CardiacMuscleDisease"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="http://example.org/b#PulmonaryDisorder">
+        <rdfs:label>pulmonary disorder</rdfs:label>
+        <efo:alternative_term>lung disease</efo:alternative_term>
+    </owl:Class>
+
+    <owl:AllDisjointClasses>
+        <owl:members rdf:parseType="Collection">
+            <rdf:Description rdf:about="http://example.org/b#DCM1A"/>
+            <rdf:Description rdf:about="http://example.org/b#DCM1B"/>
+        </owl:members>
+    </owl:AllDisjointClasses>
+</rdf:RDF>

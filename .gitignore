@@ -95,7 +95,6 @@ ENV/
 [Ll]ib
 [Ll]ib64
 [Ll]ocal
-[Ss]cripts
 pyvenv.cfg
 .venv
 pip-selfcheck.json
@@ -195,3 +194,10 @@ CLAUDE.local.md
 
 # macOS
 .DS_Store
+# --- project ---
+.DS_Store
+data/raw/
+data/splits/
+data/pairs/
+runs/
+!data/README.md

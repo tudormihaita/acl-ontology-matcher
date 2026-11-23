@@ -1,0 +1,143 @@
+{
+  "source": {
+    "file": "data/raw/bio-ml/omim-ordo/omim.owl",
+    "stats": {
+      "classes": 9648,
+      "alignable_classes": 9642,
+      "classes_without_labels": 0,
+      "labels_per_class_mean": 1.667,
+      "labels_per_class_median": 2.0,
+      "pct_ge2_labels": 66.75,
+      "pct_exactly1_label": 33.25,
+      "pct_with_definition": 0.0,
+      "roots": 5433,
+      "depth_max": 1,
+      "depth_mean": 0.437,
+      "longest_depth_max": 1,
+      "longest_depth_mean": 0.437,
+      "unreachable_from_root": 0,
+      "pct_with_parent": 43.69,
+      "siblings_per_class_mean": 11.898,
+      "siblings_per_class_median": 0.0,
+      "pct_with_sibling": 43.63,
+      "disjointness_pairs": 0
+    },
+    "annotation_properties": {
+      "http://purl.obolibrary.org/obo/IAO_0000142": {
+        "iri": 72762
+      },
+      "http://www.w3.org/2004/02/skos/core#exactMatch": {
+        "literal": 19139
+      },
+      "http://www.w3.org/1999/02/22-rdf-syntax-ns#type": {
+        "iri": 9648
+      },
+      "http://www.w3.org/2000/01/rdf-schema#label": {
+        "literal": 9648
+      },
+      "https://w3id.org/biolink/vocab/category": {
+        "iri": 8020
+      },
+      "http://www.geneontology.org/formats/oboInOwl#hasExactSynonym": {
+        "literal": 6440
+      },
+      "http://www.w3.org/2000/01/rdf-schema#subClassOf": {
+        "iri": 4328
+      },
+      "http://purl.obolibrary.org/obo/RO_0002525": {
+        "iri": 1050
+      },
+      "http://purl.obolibrary.org/obo/RO_0003303": {
+        "iri": 125
+      },
+      "http://oaei.ontologymatching.org/bio-ml/ann/use_in_alignment": {
+        "literal": 6
+      }
+    },
+    "cross_references": {
+      "http://www.w3.org/2004/02/skos/core#exactMatch": {
+        "free-text literal": 19139
+      }
+    }
+  },
+  "target": {
+    "file": "data/raw/bio-ml/omim-ordo/ordo.owl",
+    "stats": {
+      "classes": 9275,
+      "alignable_classes": 8838,
+      "classes_without_labels": 0,
+      "labels_per_class_mean": 2.327,
+      "labels_per_class_median": 2,
+      "pct_ge2_labels": 61.46,
+      "pct_exactly1_label": 38.54,
+      "pct_with_definition": 71.44,
+      "roots": 5,
+      "depth_max": 2,
+      "depth_mean": 1.981,
+      "longest_depth_max": 12,
+      "longest_depth_mean": 7.046,
+      "unreachable_from_root": 0,
+      "pct_with_parent": 99.95,
+      "siblings_per_class_mean": 39.101,
+      "siblings_per_class_median": 12,
+      "pct_with_sibling": 98.1,
+      "disjointness_pairs": 0
+    },
+    "annotation_properties": {
+      "http://www.w3.org/2000/01/rdf-schema#subClassOf": {
+        "bnode": 46463,
+        "iri": 12164
+      },
+      "http://www.ebi.ac.uk/efo/alternative_term": {
+        "literal": 12308
+      },
+      "http://www.w3.org/2000/01/rdf-schema#label": {
+        "literal": 9275
+      },
+      "http://www.w3.org/1999/02/22-rdf-syntax-ns#type": {
+        "iri": 9275
+      },
+      "http://www.w3.org/2004/02/skos/core#notation": {
+        "literal": 9094
+      },
+      "http://www.ebi.ac.uk/efo/definition": {
+        "literal": 6626
+      },
+      "http://www.ebi.ac.uk/efo/definition_citation": {
+        "literal": 6578
+      },
+      "http://oaei.ontologymatching.org/bio-ml/ann/use_in_alignment": {
+        "literal": 437
+      }
+    },
+    "cross_references": {}
+  },
+  "config": {
+    "ontology": {
+      "label_properties": [
+        "rdfs:label",
+        "skos:prefLabel",
+        "skos:altLabel",
+        "oboInOwl:hasExactSynonym",
+        "efo:alternative_term"
+      ],
+      "definition_properties": [
+        "obo:IAO_0000115",
+        "skos:definition",
+        "efo:definition"
+      ],
+      "parent_restriction_properties": [
+        "obo:BFO_0000050"
+      ],
+      "max_parent_fanout": 200
+    },
+    "source_label_fixes": [
+      {
+        "pattern": "\\biia\\b",
+        "replace": "type",
+        "count": 1
+      }
+    ],
+    "target_label_fixes": null
+  }
+}

@@ -1,0 +1,6 @@
+SrcEntity	TgtEntity	Score
+http://example.org/a#HeartDisease	http://example.org/b#DisorderOfHeart	1.0
+http://example.org/a#Cardiomyopathy	http://example.org/b#CardiacMuscleDisease	1.0
+http://example.org/a#DilatedCardiomyopathy1A	http://example.org/b#DCM1A	1.0
+http://example.org/a#DilatedCardiomyopathy1B	http://example.org/b#DCM1B	1.0
+http://example.org/a#LungDisease	http://example.org/b#PulmonaryDisorder	1.0

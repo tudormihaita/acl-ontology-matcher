@@ -1,0 +1,62 @@
+name: base
+seed: 42
+device: auto              # auto | mps | cuda | cpu
+task:
+  name: omim-ordo
+  source_owl: data/raw/bio-ml/omim-ordo/omim.owl
+  target_owl: data/raw/bio-ml/omim-ordo/ordo.owl
+  full_refs: data/raw/bio-ml/omim-ordo/refs_equiv/full.tsv
+  # Bio-ML ships no unsupervised val split: its 30% "train" file is our validation set
+  # (never used for training); test and candidates are the official ones (data/README.md).
+  val_refs: data/raw/bio-ml/omim-ordo/refs_equiv/train.tsv
+  test_refs: data/raw/bio-ml/omim-ordo/refs_equiv/test.tsv
+  test_cands: data/raw/bio-ml/omim-ordo/refs_equiv/test.cands.tsv
+  # Bio-ML OMIM artefact: "type" was replaced by "iia" (e.g. "nuclear iia 7"). Restore the
+  # first occurrence ("..., iia iia" was originally "TYPE IIA"). Applied to all methods.
+  source_label_fixes:
+    - {pattern: '\biia\b', replace: type, count: 1}
+ontology:
+  # Label order = priority. efo:alternative_term is ORDO's synonym property.
+  # OMIM skos:exactMatch literals are deliberately NOT read (unclear provenance, SPEC §3.3).
+  label_properties: [rdfs:label, skos:prefLabel, skos:altLabel, oboInOwl:hasExactSynonym, efo:alternative_term]
+  definition_properties: [obo:IAO_0000115, skos:definition, efo:definition]
+  # "part_of some X" superclasses are parent edges (ORDO's clinical classification).
+  parent_restriction_properties: [obo:BFO_0000050]
+  # Parents with more children are generic categories, ignored for siblings/negatives/neighbours.
+  max_parent_fanout: 200
+pairs:
+  positives: [syn]          # syn | lex
+  hard_negatives: []        # sibling | sibling_filtered | hierarchy | model_mined
+  num_hard_negatives: 1
+  max_pairs_per_class: 10
+  filter_cos: 0.85
+  batch_scope: per_ontology
+lex:
+  abbreviations: true
+  rewrite_rules: true
+  normalisation_table: true
+  min_rule_count: 20
+model:
+  encoder: sentence-transformers/all-MiniLM-L6-v2
+  max_seq_length: 32
+train:
+  enabled: true             # false => epoch-0 reference
+  loss: mnrl                # mnrl | mnrl_symmetric | cached_mnrl | supcon
+  temperature: 0.05
+  batch_size: 128
+  epochs: 1
+  lr: 2.0e-5
+  warmup_ratio: 0.1
+match:
+  method: embedding         # embedding | string_match
+  class_repr: max           # max | mean
+  scoring: cosine           # cosine | csls
+  csls_k: 10
+  neighbour_lambda: 0.0
+  selection: argmax         # argmax | mutual | stable_marriage
+  top_k: 10
+  threshold_grid: [0.30, 1.00, 0.01]   # cosine; csls uses the percentile grid (SPEC §5.2)
+output:
+  runs_dir: runs
+  results_dir: results
+  pairs_dir: data/pairs

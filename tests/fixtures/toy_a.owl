@@ -1,0 +1,82 @@
+<?xml version="1.0"?>
+<!-- Toy source ontology (disease-like). Hierarchy:
+     Disease
+       HeartDisease
+         Cardiomyopathy (alt: "CMP")
+           DilatedCardiomyopathy1A   (syn: "CMD1A", "cardiomyopathy, dilated, 1a")
+           DilatedCardiomyopathy1B   (syn: "CMD1B")
+       LungDisease (one label only)
+     ObsoleteThing   (owl:deprecated true, must be skipped)
+     HelperClass     (use_in_alignment false)
+-->
+<rdf:RDF xmlns="http://example.org/a#"
+     xml:base="http://example.org/a"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+     xmlns:obo="http://purl.obolibrary.org/obo/"
+     xmlns:ann="http://oaei.ontologymatching.org/bio-ml/ann/"
+     xmlns:oboInOwl="http://www.geneontology.org/formats/oboInOwl#">
+    <owl:Ontology rdf:about="http://example.org/a"/>
+    <owl:ObjectProperty rdf:about="http://example.org/a#hasSite"/>
+
+    <owl:Class rdf:about="http://example.org/a#Disease">
+        <rdfs:label>Disease</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="http://example.org/a#HeartDisease">
+        <rdfs:label>HeartDisease</rdfs:label>
+        <oboInOwl:hasExactSynonym>cardiac   disease</oboInOwl:hasExactSynonym>
+        <rdfs:subClassOf rdf:resource="http://example.org/a#Disease"/>
+        <owl:disjointWith rdf:resource="http://example.org/a#LungDisease"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="http://example.org/a#Cardiomyopathy">
+        <rdfs:label>Cardiomyopathy</rdfs:label>
+        <skos:altLabel>CMP</skos:altLabel>
+        <obo:IAO_0000115>A disease of the heart muscle (CMP).</obo:IAO_0000115>
+        <oboInOwl:hasDbXref>OMIM:999999</oboInOwl:hasDbXref>
+        <rdfs:seeAlso rdf:resource="http://example.org/b#Cardiomyopathy"/>
+        <rdfs:subClassOf rdf:resource="http://example.org/a#HeartDisease"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://example.org/a#hasSite"/>
+                <owl:someValuesFrom rdf:resource="http://example.org/a#Disease"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="http://example.org/a#DilatedCardiomyopathy1A">
+        <rdfs:label>Dilated cardiomyopathy 1A</rdfs:label>
+        <oboInOwl:hasExactSynonym>CMD1A</oboInOwl:hasExactSynonym>
+        <oboInOwl:hasExactSynonym>Cardiomyopathy, dilated, 1A</oboInOwl:hasExactSynonym>
+        <oboInOwl:hasExactSynonym>dilated cardiomyopathy 1a</oboInOwl:hasExactSynonym>
+        <oboInOwl:hasRelatedSynonym>heart failure</oboInOwl:hasRelatedSynonym>
+        <rdfs:subClassOf rdf:resource="http://example.org/a#Cardiomyopathy"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="http://example.org/a#DilatedCardiomyopathy1B">
+        <rdfs:label>Dilated cardiomyopathy 1B</rdfs:label>
+        <oboInOwl:hasExactSynonym>CMD1B</oboInOwl:hasExactSynonym>
+        <rdfs:subClassOf rdf:resource="http://example.org/a#Cardiomyopathy"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="http://example.org/a#LungDisease">
+        <rdfs:label>Lung disease</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://example.org/a#Disease"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="http://example.org/a#ObsoleteThing">
+        <rdfs:label>obsolete cardiomyopathy</rdfs:label>
+        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <rdfs:subClassOf rdf:resource="http://example.org/a#Cardiomyopathy"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="http://example.org/a#HelperClass">
+        <rdfs:label>helper grouping class</rdfs:label>
+        <ann:use_in_alignment rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">false</ann:use_in_alignment>
+        <rdfs:subClassOf rdf:resource="http://example.org/a#Disease"/>
+    </owl:Class>
+</rdf:RDF>
