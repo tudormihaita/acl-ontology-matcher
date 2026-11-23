@@ -5,7 +5,7 @@ import pytest
 from contrastive_om.ontology import (
     apply_label_fixes,
     load_ontology,
-    normalise_label,
+    normalize_label,
     ontology_stats,
 )
 
@@ -39,8 +39,8 @@ def ont_b():
         ("  Dilated Cardiomyopathy 1A ", "dilated cardiomyopathy 1a"),
     ],
 )
-def test_normalise_label(raw, expected):
-    assert normalise_label(raw) == expected
+def test_normalize_label(raw, expected):
+    assert normalize_label(raw) == expected
 
 
 def test_labels_deduplicated_with_rdfs_label_first(ont_a):

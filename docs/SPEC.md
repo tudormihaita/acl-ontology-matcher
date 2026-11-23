@@ -8,7 +8,7 @@ Deadline: **3 days**. The core (Phases 0–7) must be finished first. Phase 8 (p
 
 ## 1. Goal
 
-**Research question.** Can a bi-encoder trained with a **contrastive (InfoNCE) objective** on positive/negative pairs mined from each ontology produce a reusable **entity embedding space** in which ontology matching works by **nearest-neighbour search alone**, without candidate selection, rule-based mapping extension or logical repair?
+**Research question.** Can a bi-encoder trained with a **contrastive (InfoNCE) objective** on positive/negative pairs mined from each ontology produce a reusable **entity embedding space** in which ontology matching works by **nearest-neighbor search alone**, without candidate selection, rule-based mapping extension or logical repair?
 
 **Context (from RR1).**
 - DeepAlignment (Kolyvakis et al., 2018) refines static word vectors with synonym attract / antonym repel and matches directly in that space (set-to-set cosine distance, then Stable Marriage).
@@ -19,7 +19,7 @@ Deadline: **3 days**. The core (Phases 0–7) must be finished first. Phase 8 (p
 **Hard constraints.**
 - **Unsupervised setting:** no reference mappings are ever used for training.
 - **Test references are never used for any decision.** That includes thresholds, hyperparameters, early stopping and the choice of the "best" setting in each experiment. All such choices use the **validation** split.
-- **No rule-based or logic-based post-processing in the core.** That kind of processing is only allowed in Extensions. (Numeric scoring options such as CSLS and neighbour-aware scoring, Section 4.5, are part of the core.)
+- **No rule-based or logic-based post-processing in the core.** That kind of processing is only allowed in Extensions. (Numeric scoring options such as CSLS and neighbor-aware scoring, Section 4.5, are part of the core.)
 
 ---
 
@@ -81,7 +81,7 @@ Deadline: **3 days**. The core (Phases 0–7) must be finished first. Phase 8 (p
 
 Parsing uses `rdflib`. For each named class, collect:
 - `iri`
-- `labels`: a deduplicated list of normalised strings. Lowercase, split camelCase and underscores, collapse whitespace.
+- `labels`: a deduplicated list of normalized strings. Lowercase, split camelCase and underscores, collapse whitespace.
 - `definitions`: from configurable definition properties (default `obo:IAO_0000115`, `skos:definition`), if present. Used only as input to abbreviation extraction (Section 4.2.1).
 - `parents` and `children`: direct, named classes only. Drop `owl:Thing` and anonymous restrictions.
 - `siblings`: classes sharing at least one direct parent.
@@ -92,7 +92,7 @@ Parsing uses `rdflib`. For each named class, collect:
 
 **Hierarchy** (decided after Phase 0):
 - Parent edges are named `rdfs:subClassOf` **plus** `P some X` restrictions for P in `parent_restriction_properties` (default `obo:BFO_0000050`, part_of). ORDO's named `subClassOf` is only Orphanet's type taxonomy ("disease", "group of disorders", ...), and its clinical classification is expressed with part_of.
-- Parents with more than `max_parent_fanout` (default 200) direct children are generic categories. They are kept as parents but ignored ("non-informative") for siblings, hierarchy negatives and neighbour-aware scoring.
+- Parents with more than `max_parent_fanout` (default 200) direct children are generic categories. They are kept as parents but ignored ("non-informative") for siblings, hierarchy negatives and neighbor-aware scoring.
 - With these settings, 98% of ORDO classes have siblings (median 12), and OMIM is unaffected (its largest phenotypic series has 102 members).
 
 **Label fixes** (per side, documented data cleaning, applied to every method including the baseline):
@@ -129,23 +129,23 @@ Mine **per ontology**, independently. Output rows look like `{anchor, positive, 
 
 The lexicon turns each ontology's own naming conventions into new positive pairs. It is built **per ontology** from that ontology's content only. Three mechanisms:
 
-**(a) Abbreviation extraction.** Run the Schwartz–Hearst algorithm over the raw (un-normalised) labels and definitions to find (long form, short form) pairs. Example: `"alzheimer disease 2; AD2"` → `("alzheimer disease 2", "ad2")`. A pair is kept only if the long form is a label of C or contained in a label/definition of C. It becomes a positive for C.
+**(a) Abbreviation extraction.** Run the Schwartz–Hearst algorithm over the raw (un-normalized) labels and definitions to find (long form, short form) pairs. Example: `"alzheimer disease 2; AD2"` → `("alzheimer disease 2", "ad2")`. A pair is kept only if the long form is a label of C or contained in a label/definition of C. It becomes a positive for C.
 
 **(b) Rewrite rules mined from synonym pairs.**
-- For every pair of labels of the same class, compute the token-level edit after normalisation. Rule types:
+- For every pair of labels of the same class, compute the token-level edit after normalization. Rule types:
   - comma inversion: `"x, y"` ↔ `"y x"` (e.g. `"deafness, autosomal dominant 5"` ↔ `"autosomal dominant deafness 5"`);
   - single-token insertion/deletion (e.g. `"type 2"` ↔ `"2"`);
   - single-token substitution (e.g. `"syndrome"` ↔ `"disease"`).
 - Represent each edit as a context-free rule and count its occurrences. Keep rules with count ≥ `lex.min_rule_count` (default 20).
 - Apply the kept rules to every label of every class to generate variants.
 
-**(c) Normalisation table** (hand-written, small, in `lexicon.py`):
+**(c) Normalization table** (hand-written, small, in `lexicon.py`):
 - roman ↔ arabic numerals I–X ↔ 1–10 when they appear as standalone tokens (e.g. `"type ii"` ↔ `"type 2"`);
 - a short British/US spelling list (e.g. `haem`/`hem`, `oesophag`/`esophag`, `tumour`/`tumor`).
 
 **Filters for generated variants:**
 - the variant must differ from every existing label of C;
-- drop the variant if it equals a normalised label of **another** class in the same ontology (it would create a contradictory positive);
+- drop the variant if it equals a normalized label of **another** class in the same ontology (it would create a contradictory positive);
 - deduplicate variants; respect `max_pairs_per_class`.
 
 **Output:** `data/pairs/<config-hash>.lexicon.json` with the kept rules, their counts and examples, the abbreviation pairs, and the number of positives each mechanism added. These examples are reused in the analysis and the presentation.
@@ -157,9 +157,9 @@ The lexicon turns each ontology's own naming conventions into new positive pairs
 | key | negative | notes |
 |---|---|---|
 | `sibling` | a label of a sibling class | the hardest; can be a false negative |
-| `sibling_filtered` | as `sibling`, after filtering | drop a sibling if (a) it shares any normalised label with C, (b) its pre-trained-encoder cosine to the anchor is > `filter_cos` (default 0.85), or (c) the ontology has disjointness axioms and they do not declare the sibling disjoint from C. Rule (c) only applies if the ontology has any disjointness axioms; Phase 0 reports whether it does |
+| `sibling_filtered` | as `sibling`, after filtering | drop a sibling if (a) it shares any normalized label with C, (b) its pre-trained-encoder cosine to the anchor is > `filter_cos` (default 0.85), or (c) the ontology has disjointness axioms and they do not declare the sibling disjoint from C. Rule (c) only applies if the ontology has any disjointness axioms; Phase 0 reports whether it does |
 | `hierarchy` | a label of a parent or child of C | related but not equivalent |
-| `model_mined` | (should) the nearest same-ontology labels of other classes under a model from a first training round | excludes classes sharing a normalised label with C; round 2 retrains from the base encoder with these negatives |
+| `model_mined` | (should) the nearest same-ontology labels of other classes under a model from a first training round | excludes classes sharing a normalized label with C; round 2 retrains from the base encoder with these negatives |
 
 `num_hard_negatives` (default 1) is the number of hard negatives per row. **Rows with no available hard negative are filled with a random label from another class of the same ontology** (a BERTMap-style soft negative). Every row then has the same shape. The miner counts these filled rows.
 
@@ -175,7 +175,7 @@ These rules are critical for InfoNCE correctness:
 
 - **Model:** `SentenceTransformer`. Default encoder `sentence-transformers/all-MiniLM-L6-v2`: 6 layers, hidden size 384, about 22M parameters, mean pooling, already contrastively pre-trained on sentence pairs.
 - **Optional encoder (E6):** `microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext` (PubMedBERT): BERT-base, 110M parameters, biomedical vocabulary, no sentence-level pretraining. Mean pooling is added automatically.
-- **Similarity in the loss:** cosine similarity of L2-normalised embeddings, scaled by 1/τ, followed by softmax cross-entropy. Matching uses the same cosine.
+- **Similarity in the loss:** cosine similarity of L2-normalized embeddings, scaled by 1/τ, followed by softmax cross-entropy. Matching uses the same cosine.
 - **Loss:** InfoNCE via `losses.MultipleNegativesRankingLoss(model, scale=1/τ)`. For anchor *a_i*, positive *p_i* and hard negatives *n_ik*, the negatives are all other positives in the batch plus all hard negatives in the batch.
   - Config `loss: mnrl | mnrl_symmetric | cached_mnrl | supcon`.
   - Use `cached_mnrl` (`CachedMultipleNegativesRankingLoss`) for batch sizes above what fits in memory.
@@ -188,9 +188,9 @@ These rules are critical for InfoNCE correctness:
 
 Config `class_repr`:
 - `max` (default): embed every label. The score of a class pair is the maximum cosine over all their label pairs.
-- `mean`: the class embedding is the L2-normalised mean of its label embeddings.
+- `mean`: the class embedding is the L2-normalized mean of its label embeddings.
 
-Embeddings are L2-normalised, so cosine is the dot product. Only labels are embedded; IRIs (opaque IDs) and cross-references are never used.
+Embeddings are L2-normalized, so cosine is the dot product. Only labels are embedded; IRIs (opaque IDs) and cross-references are never used.
 
 ### 4.5 Matching from the embedding space (`src/contrastive_om/match.py`)
 
@@ -200,7 +200,7 @@ Embeddings are L2-normalised, so cosine is the dot product. Only labels are embe
    - `cosine`: the class score from Section 4.4.
    - `csls`: cross-domain similarity local scaling (Conneau et al., 2018), which corrects hubness: `csls(s,t) = 2·cos(s,t) − r_T(s) − r_S(t)`, where `r_T(s)` is the mean cosine of s to its `csls_k` (default 10) nearest targets, and `r_S(t)` likewise for t over sources.
 4. Keep the top-k targets per source (k = 10) and their scores.
-5. **Neighbour-aware re-scoring** (config `neighbour_lambda`, default 0 = off), applied to the top-k candidates only:
+5. **Neighbor-aware re-scoring** (config `neighbor_lambda`, default 0 = off), applied to the top-k candidates only:
    `score'(s,t) = (1−λ)·score(s,t) + λ·sim_N(s,t)`,
    where `sim_N(s,t)` = the mean over parents p of s of the max over parents q of t of `score(p,q)`. If s or t has no parents, `sim_N(s,t) = score(s,t)`, so there is no penalty. λ ∈ {0, 0.1, 0.2, 0.3} is chosen on validation.
 6. **Selection** (config `selection`):
@@ -214,7 +214,7 @@ No candidate index, no extension, no repair.
 
 ### 4.6 String-match baseline (`match.py`, `method: string_match`)
 
-Map (s, t) with score 1.0 if s and t share at least one normalised label (Section 4.1 normalisation, without lexicon variants). Every such pair is kept; no threshold and no selection. It is evaluated with the same harness:
+Map (s, t) with score 1.0 if s and t share at least one normalized label (Section 4.1 normalization, without lexicon variants). Every such pair is kept; no threshold and no selection. It is evaluated with the same harness:
 - global matching P/R/F1;
 - ranking metrics, using token-Jaccard over the best label pair as the ranking score.
 
@@ -244,7 +244,13 @@ It is the floor the learned method must beat, and it shows where each method win
 - **Reference points:**
   - the string-match baseline (Section 4.6);
   - the pre-trained encoder with no fine-tuning ("epoch 0"), evaluated with the same pipeline. This shows the effect of contrastive training.
-- **Robustness:** the final configuration is trained with 3 seeds (42, 43, 44) and reported as mean ± std. A bootstrap 95% CI (1,000 resamples of test mappings) is computed for its F1 and MRR.
+- **Robustness:** the final configuration is trained with 3 seeds (42, 43, 44) and reported as mean ± std. A bootstrap 95% CI (1,000 resamples) is computed for its F1 and MRR.
+  - For F1, the resampled units are **source entities** (each carries its TP / #predictions / #references), so false positives are resampled too. Mappings are almost 1-to-1, so this is close to resampling test mappings.
+  - For MRR, the resampled units are the test queries.
+- **Evaluation conventions** (`evaluate.py`):
+  - **Null references:** a prediction is ignored only if it is *exactly* a mapping of the other split (DeepOnto convention).
+  - **Ranking ties are pessimistic:** the gold target ranks after every candidate with an equal score.
+  - **Threshold ties:** ties in validation F1 go to the higher θ.
 - **Results table:** all runs append one row to `results/summary.csv`, with config name, key config fields, all metrics, θ and times.
 
 ### 5.3 Harness validation
@@ -259,7 +265,7 @@ Each experiment is one YAML in `configs/`, run with `uv run python -m contrastiv
 
 | ID | Varies | Values | Training runs | Priority |
 |---|---|---|---|---|
-| B | string-match baseline | exact normalised label overlap | 0 | must |
+| B | string-match baseline | exact normalized label overlap | 0 | must |
 | E0 | epoch-0 reference | pre-trained MiniLM | 0 | must |
 | E1 | positives | `[syn]` / `[syn, lex]` | 2 | must |
 | E2 | hard negatives | none / `sibling` / `sibling_filtered` / `hierarchy` | 3 (none = E1 winner) | must |
@@ -269,7 +275,7 @@ Each experiment is one YAML in `configs/`, run with `uv run python -m contrastiv
 | E3c | loss | `mnrl` / `supcon` | 1 | should |
 | E4 | class representation | `max` / `mean` | 0 (inference only) | must |
 | E5 | scoring × selection | {`cosine`, `csls`} × {`argmax`, `mutual`, `stable_marriage`} | 0 (inference only) | must |
-| E5b | neighbour-aware re-scoring | λ ∈ {0, 0.1, 0.2, 0.3} | 0 (inference only) | must |
+| E5b | neighbor-aware re-scoring | λ ∈ {0, 0.1, 0.2, 0.3} | 0 (inference only) | must |
 | E6 | encoder | PubMedBERT on the final config | 1 | could |
 | S | seeds | final config × 3 seeds | 2 | must |
 
@@ -336,7 +342,7 @@ pairs:
 lex:
   abbreviations: true
   rewrite_rules: true
-  normalisation_table: true
+  normalization_table: true
   min_rule_count: 20
 model:
   encoder: sentence-transformers/all-MiniLM-L6-v2
@@ -354,7 +360,7 @@ match:
   class_repr: max           # max | mean
   scoring: cosine           # cosine | csls
   csls_k: 10
-  neighbour_lambda: 0.0
+  neighbor_lambda: 0.0
   selection: argmax         # argmax | mutual | stable_marriage
   top_k: 10
   threshold_grid: [0.30, 1.00, 0.01]   # cosine; csls uses the percentile grid (Section 5.2)
@@ -399,7 +405,7 @@ Each phase ends with its acceptance checks passing. The user commits each phase 
 - ✅ Tests pass exactly, including null-reference handling.
 
 **Phase 2: lexicon, pair mining and batching (≈2.5h)**
-- Write `lexicon.py` (abbreviations, rewrite rules, normalisation table) and `test_lexicon.py`:
+- Write `lexicon.py` (abbreviations, rewrite rules, normalization table) and `test_lexicon.py`:
   - Schwartz–Hearst on known examples;
   - rule mining and application on toy labels;
   - the variant filters.
@@ -416,10 +422,10 @@ Each phase ends with its acceptance checks passing. The user commits each phase 
 **Phase 4: representation and matching (≈2.5h)**
 - Write `represent.py` and `match.py`:
   - all class representations, scorings (cosine, CSLS) and selections;
-  - neighbour-aware re-scoring;
+  - neighbor-aware re-scoring;
   - the string-match baseline;
   - the chunked scoring.
-- Write `test_match.py`: Stable Marriage, mutual nearest neighbours and CSLS on toy matrices.
+- Write `test_match.py`: Stable Marriage, mutual nearest neighbors and CSLS on toy matrices.
 - ✅ `cli run --config configs/smoke.yaml` produces metrics. The baseline and E0 (epoch-0) produce full-task metrics.
 
 **Phase 5: experiments (≈3h, mostly compute)**

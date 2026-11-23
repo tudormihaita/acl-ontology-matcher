@@ -58,7 +58,7 @@ def expand_curie(curie: str) -> str:
     return PREFIXES[prefix] + local
 
 
-def normalise_label(text: str) -> str:
+def normalize_label(text: str) -> str:
     """Lowercase, split camelCase/underscores, collapse whitespace.
 
     camelCase is only split for single-token identifiers such as ``ConferenceDinner``,
@@ -73,9 +73,9 @@ def normalise_label(text: str) -> str:
 @dataclass
 class OntologyClass:
     iri: str
-    labels: list[str] = field(default_factory=list)  # normalised, deduplicated, rdfs:label first
+    labels: list[str] = field(default_factory=list)  # normalized, deduplicated, rdfs:label first
     definitions: list[str] = field(default_factory=list)  # raw text
-    raw_labels: list[str] = field(default_factory=list)  # un-normalised (for abbreviation mining)
+    raw_labels: list[str] = field(default_factory=list)  # un-normalized (for abbreviation mining)
     parents: set[str] = field(default_factory=set)
     children: set[str] = field(default_factory=set)
     disjoint_with: set[str] = field(default_factory=set)
@@ -182,7 +182,7 @@ class Ontology:
 
     @cached_property
     def label_index(self) -> dict[str, set[str]]:
-        """Normalised label -> IRIs of classes carrying it."""
+        """Normalized label -> IRIs of classes carrying it."""
         index: dict[str, set[str]] = {}
         for c in self:
             for label in c.labels:
@@ -195,7 +195,7 @@ def _is_true(graph: rdflib.Graph, subject, predicate) -> bool:
 
 
 def apply_label_fixes(label: str, fixes: list[dict] | None) -> str:
-    """Apply documented data-cleaning substitutions to a normalised label.
+    """Apply documented data-cleaning substitutions to a normalized label.
 
     Each fix is ``{pattern: <regex>, replace: <str>, count: <int, 0 = all>}``.
     Used for the Bio-ML OMIM artefact where "type" became "iia" (see data/README.md).
@@ -252,7 +252,7 @@ def load_ontology(
             for o in sorted(graph.objects(s, p), key=str):
                 if isinstance(o, Literal) and str(o).strip():
                     raw.append(str(o).strip())
-        labels = list(dict.fromkeys(apply_label_fixes(normalise_label(r), label_fixes) for r in raw))
+        labels = list(dict.fromkeys(apply_label_fixes(normalize_label(r), label_fixes) for r in raw))
         labels = [lab for lab in labels if lab]
         definitions = [
             str(o).strip()

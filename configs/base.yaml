@@ -22,7 +22,7 @@ ontology:
   definition_properties: [obo:IAO_0000115, skos:definition, efo:definition]
   # "part_of some X" superclasses are parent edges (ORDO's clinical classification).
   parent_restriction_properties: [obo:BFO_0000050]
-  # Parents with more children are generic categories, ignored for siblings/negatives/neighbours.
+  # Parents with more children are generic categories, ignored for siblings/negatives/neighbors.
   max_parent_fanout: 200
 pairs:
   positives: [syn]          # syn | lex
@@ -34,7 +34,7 @@ pairs:
 lex:
   abbreviations: true
   rewrite_rules: true
-  normalisation_table: true
+  normalization_table: true
   min_rule_count: 20
 model:
   encoder: sentence-transformers/all-MiniLM-L6-v2
@@ -52,7 +52,7 @@ match:
   class_repr: max           # max | mean
   scoring: cosine           # cosine | csls
   csls_k: 10
-  neighbour_lambda: 0.0
+  neighbor_lambda: 0.0
   selection: argmax         # argmax | mutual | stable_marriage
   top_k: 10
   threshold_grid: [0.30, 1.00, 0.01]   # cosine; csls uses the percentile grid (SPEC §5.2)
