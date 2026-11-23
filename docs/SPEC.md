@@ -188,13 +188,19 @@ These rules are critical for InfoNCE correctness:
 - **Model:** `SentenceTransformer`. Default encoder `sentence-transformers/all-MiniLM-L6-v2`: 6 layers, hidden size 384, about 22M parameters, mean pooling, already contrastively pre-trained on sentence pairs.
 - **Optional encoder (E6):** `microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext` (PubMedBERT): BERT-base, 110M parameters, biomedical vocabulary, no sentence-level pretraining. Mean pooling is added automatically.
 - **Similarity in the loss:** cosine similarity of L2-normalized embeddings, scaled by 1/τ, followed by softmax cross-entropy. Matching uses the same cosine.
-- **Loss:** InfoNCE via `losses.MultipleNegativesRankingLoss(model, scale=1/τ)`. For anchor *a_i*, positive *p_i* and hard negatives *n_ik*, the negatives are all other positives in the batch plus all hard negatives in the batch.
-  - Config `loss: mnrl | mnrl_symmetric | cached_mnrl | supcon`.
-  - Use `cached_mnrl` (`CachedMultipleNegativesRankingLoss`) for batch sizes above what fits in memory.
+- **Loss:** InfoNCE (van den Oord et al., 2018). For anchor *a_i*, positive *p_i* and hard negatives *n_ik*, the negatives are all other positives in the batch plus all hard negatives in the batch.
+  - It is implemented by sentence-transformers' `MultipleNegativesRankingLoss` (MNRL) with `scale = 1/τ`; under these settings MNRL is exactly InfoNCE.
+  - Config `loss: infonce | infonce_symmetric | infonce_cached | supcon`. `infonce_symmetric` also trains the positive → anchor direction (CLIP-style).
+  - Use `infonce_cached` (`CachedMultipleNegativesRankingLoss`) for batch sizes above what fits in memory.
   - `supcon` (should): a custom supervised-contrastive loss in which all labels of the same class in a batch are positives for each other. This needs class-grouped batches (k labels per class), still per-ontology, and still with no hard negative from an in-batch class.
 - **Defaults:** τ = 0.05 (scale 20), batch size 128, 1 epoch, lr 2e-5, warmup 10%, AdamW, weight decay 0.01, `max_seq_length` 32, seed 42.
 - **Training data:** pairs from **both** ontologies of the task. This is unsupervised: no mappings are used.
 - **Per-run output:** `runs/<YYYYmmdd-HHMM>-<config-name>/`, containing the config copy, `model/`, `train_log.jsonl` (loss per step), `metrics.json` and `timing.json`.
+- **Implementation notes (Phase 3):**
+  - A small explicit training loop (not the high-level Trainer) consumes the pre-built batches exactly as built: tokenize the columns, call the sentence-transformers loss, AdamW, linear warmup/decay, gradient clipping at 1.0.
+  - Batch order is rebuilt per epoch with seed + epoch.
+  - On MPS the encoder is loaded with eager attention, because the fused SDPA kernel has no dropout support on MPS and breaks `infonce_cached`. Eager attention gives identical results and is used for every loss, so runs stay comparable.
+  - After training, the saved checkpoint is reloaded and must reproduce the trained model's embeddings (`train_summary.json`).
 
 ### 4.4 Class representation (`src/contrastive_om/represent.py`)
 
@@ -283,8 +289,8 @@ Each experiment is one YAML in `configs/`, run with `uv run python -m contrastiv
 | E2 | hard negatives | none / `sibling` / `sibling_filtered` / `hierarchy` | 3 (none = E1 winner) | must |
 | E2b | model-mined hard negatives | two-round training with `model_mined` | 1 | should |
 | E3a | temperature | τ ∈ {0.02, 0.05, 0.1} | 2 (0.05 = E2 winner) | must |
-| E3b | batch size | {32, 128, 512} (`cached_mnrl` for 512) | 2 | should |
-| E3c | loss | `mnrl` / `supcon` | 1 | should |
+| E3b | batch size | {32, 128, 512} (`infonce_cached` for 512) | 2 | should |
+| E3c | loss | `infonce` / `supcon` | 1 | should |
 | E4 | class representation | `max` / `mean` | 0 (inference only) | must |
 | E5 | scoring × selection | {`cosine`, `csls`} × {`argmax`, `mutual`, `stable_marriage`} | 0 (inference only) | must |
 | E5b | neighbor-aware re-scoring | λ ∈ {0, 0.1, 0.2, 0.3} | 0 (inference only) | must |
@@ -363,7 +369,7 @@ model:
   max_seq_length: 32
 train:
   enabled: true             # false => epoch-0 reference
-  loss: mnrl                # mnrl | mnrl_symmetric | cached_mnrl | supcon
+  loss: infonce             # infonce | infonce_symmetric | infonce_cached | supcon
   temperature: 0.05
   batch_size: 128
   epochs: 1
@@ -381,6 +387,9 @@ match:
 ```
 
 `configs/smoke.yaml` subsamples about 500 classes per ontology and about 2k pairs, for end-to-end runs under 2 minutes.
+- `task.subsample` keeps 150 mapped pairs, so matching has something to find, plus random classes.
+- Smoke runs are a plumbing check only and are never reported.
+- The rule miner keeps no rules at this size (counts < 20), which is expected.
 
 ### CLI (`uv run python -m contrastive_om.cli <cmd>`)
 
@@ -430,7 +439,7 @@ Each phase ends with its acceptance checks passing. The user commits each phase 
 ### Day 2
 
 **Phase 3: training (≈1.5h)**
-- Write `train.py` with MNRL, symmetric MNRL and cached MNRL (SupCon if time allows, E3c), plus run-dir logging.
+- Write `train.py` with InfoNCE (plain, symmetric and cached) (SupCon if time allows, E3c), plus run-dir logging.
 - ✅ `smoke.yaml` trains end to end. The loss decreases. The checkpoint reloads.
 
 **Phase 4: representation and matching (≈2.5h)**

@@ -87,7 +87,34 @@ def config_from_args(args):
 
 
 def load_task_ontologies(cfg) -> dict:
-    return {which: load_from_config(cfg, which) for which in ("source", "target")}
+    onts = {which: load_from_config(cfg, which) for which in ("source", "target")}
+    if cfg.task.get("subsample"):
+        onts = subsample_task(cfg, onts)
+    return onts
+
+
+def subsample_task(cfg, onts: dict) -> dict:
+    """Smoke configuration only: keep ``reference_pairs`` mapped pairs (so that matching has
+    something to find) plus random classes, up to ``classes`` per ontology. Never used for
+    reported results."""
+    import random
+
+    from contrastive_om.evaluate import read_mappings
+    from contrastive_om.ontology import restrict
+
+    sub = cfg.task.subsample
+    rng = random.Random(int(sub.get("seed", 0)))
+    refs = [(s, t) for s, t in read_mappings(cfg.task.full_refs)
+            if s in onts["source"].classes and t in onts["target"].classes]
+    chosen = rng.sample(sorted(refs), min(int(sub.reference_pairs), len(refs)))
+    keep = {"source": {s for s, _ in chosen}, "target": {t for _, t in chosen}}
+    for which, ont in onts.items():
+        others = sorted(set(ont.classes) - keep[which])
+        need = max(0, int(sub.classes) - len(keep[which]))
+        keep[which] |= set(rng.sample(others, min(need, len(others))))
+        onts[which] = restrict(ont, keep[which])
+    log.info("smoke subsample: %d source / %d target classes", len(onts["source"]), len(onts["target"]))
+    return onts
 
 
 def mine_and_save(cfg, ontologies=None, force: bool = False):
@@ -134,6 +161,42 @@ def cmd_mine(args) -> None:
     print(f"batches (size {bs}): {batch_stats(batches, bs)} | batches violating rules: {len(bad)}")
 
 
+def train_run(cfg, rows, run_dir: Path) -> dict:
+    """Train, then verify that the saved checkpoint reloads to identical embeddings."""
+    import numpy as np
+    from sentence_transformers import SentenceTransformer
+
+    from contrastive_om.config import resolve_device
+    from contrastive_om.train import loss_summary, read_train_log, train
+
+    timing, model = train(cfg, rows, run_dir)
+    summary = loss_summary(read_train_log(run_dir))
+
+    device = resolve_device(cfg.get("device", "auto"))
+    probe = [rows[0].anchor, rows[0].positive, "alzheimer disease"]
+    trained = model.encode(probe, normalize_embeddings=True)
+    reloaded = SentenceTransformer(str(run_dir / "model"), device=device).encode(probe, normalize_embeddings=True)
+    summary.update({
+        "checkpoint_reloads": bool(np.allclose(trained, reloaded, atol=1e-5)),
+        "probe_positive_cosine": round(float(reloaded[0] @ reloaded[1]), 4),
+    })
+    (run_dir / "timing.json").write_text(json.dumps(timing, indent=2))
+    (run_dir / "train_summary.json").write_text(json.dumps(summary, indent=2))
+    return {**timing, **summary}
+
+
+def cmd_train(args) -> None:
+    from contrastive_om.train import make_run_dir
+
+    cfg = config_from_args(args)
+    rows, _, pairs_file = mine_and_save(cfg)
+    run_dir = make_run_dir(cfg)
+    out = train_run(cfg, rows, run_dir)
+    print(f"\nrun: {run_dir}\npairs: {pairs_file}")
+    for k, v in out.items():
+        print(f"  {k}: {v}")
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="contrastive_om")
     parser.add_argument("-v", "--verbose", action="store_true")
@@ -151,6 +214,9 @@ def main(argv: list[str] | None = None) -> None:
     p = with_config(sub.add_parser("mine", help="mine training pairs and print pair stats"))
     p.add_argument("--force", action="store_true", help="re-mine even if cached")
     p.set_defaults(func=cmd_mine)
+
+    p = with_config(sub.add_parser("train", help="mine (cached) and train; saves to runs/<stamp>-<name>/"))
+    p.set_defaults(func=cmd_train)
 
     args = parser.parse_args(argv)
     logging.basicConfig(

@@ -1,0 +1,12 @@
+# End-to-end plumbing check (< 2 minutes). Never used for reported results.
+inherit: base.yaml
+name: smoke
+task:
+  # keep 150 mapped pairs (so matching has something to find) + random classes, 500 per ontology
+  subsample: {classes: 500, reference_pairs: 150, seed: 0}
+pairs:
+  positives: [syn, lex]
+  hard_negatives: [sibling]
+  max_pairs_per_class: 4
+train:
+  batch_size: 32

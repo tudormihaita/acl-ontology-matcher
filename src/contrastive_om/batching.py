@@ -1,6 +1,6 @@
 """Batch construction for InfoNCE (SPEC §4.2.3).
 
-In MNRL every anchor is scored against *all* positives and hard negatives of its batch, so a
+In InfoNCE every anchor is scored against *all* positives and hard negatives of its batch, so a
 batch must not contain anything that is secretly a positive. Rules enforced here:
 
 1. **Class-unique:** no two rows with the same ``class_iri``.

@@ -43,7 +43,7 @@ model:
   max_seq_length: 32
 train:
   enabled: true             # false => epoch-0 reference
-  loss: mnrl                # mnrl | mnrl_symmetric | cached_mnrl | supcon
+  loss: infonce             # infonce | infonce_symmetric | infonce_cached | supcon
   temperature: 0.05
   batch_size: 128
   epochs: 1

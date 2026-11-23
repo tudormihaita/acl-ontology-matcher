@@ -313,6 +313,25 @@ def load_from_config(cfg, which: str, graph: rdflib.Graph | None = None, path: s
     )
 
 
+def restrict(ont: Ontology, keep: set[str]) -> Ontology:
+    """A copy of ``ont`` with only the classes in ``keep`` (edges to dropped classes removed).
+    Used for the smoke configuration."""
+    classes = {}
+    for iri in sorted(keep & set(ont.classes)):
+        c = ont[iri]
+        classes[iri] = OntologyClass(
+            iri=iri,
+            labels=list(c.labels),
+            definitions=list(c.definitions),
+            raw_labels=list(c.raw_labels),
+            parents={p for p in c.parents if p in keep},
+            children={ch for ch in c.children if ch in keep},
+            disjoint_with={d for d in c.disjoint_with if d in keep},
+            alignable=c.alignable,
+        )
+    return Ontology(ont.name, classes, max_parent_fanout=ont.max_parent_fanout)
+
+
 # --------------------------------------------------------------------------- stats
 
 
